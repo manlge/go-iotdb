@@ -1,7 +1,12 @@
 # go-iotdb
 
 iotdb client for golang</br>
-Get started
+
+## Prerequisites
+
+golang >= 1.13
+
+## Get started
 
 ```sh
 export GO111MODULE=on

@@ -20,7 +20,9 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"net"
 	"time"
 
@@ -269,16 +271,31 @@ func (s *Session) ExecuteQueryStatement(sql string) (*SessionDataSet, error) {
 	return NewSessionDataSet(sql, resp.Columns, resp.DataTypeList, resp.ColumnNameIndexMap, *resp.QueryId, s.client, s.sessionId, resp.QueryDataSet, true), err
 }
 
+func (s *Session) genTSInsertRecordReq(deviceId string, time int64,
+	measurements []string,
+	types []int32,
+	values []interface{}) *rpc.TSInsertRecordReq {
+	request := &rpc.TSInsertRecordReq{}
+	request.SessionId = s.sessionId
+	request.DeviceId = deviceId
+	request.Timestamp = time
+	request.Measurements = measurements
+
+	buff := &bytes.Buffer{}
+
+	for i, t := range types {
+		binary.Write(buff, binary.BigEndian, int16(t))
+		binary.Write(buff, binary.BigEndian, values[i])
+	}
+
+	request.Values = buff.Bytes()
+	return request
+}
+
 func (s *Session) InsertRecord(deviceId string, measurements []string, dataTypes []int32, values []interface{}, timestamp int64) error {
-	/*request := rpc.TSInsertRecordReq{SessionId: sessionId, DeviceId: deviceId, Measurements: measurements, Timestamp: timestamp}
-	request.Values = session.genRecordValues(dataTypes, values)
-	requests :=rpc.NewTSInsertRecordReq()
-	requests.
-	status, err:=client.InsertRecord(context.Background(),&request)
-	println("insert one record to device" , deviceId, "message:",status.Code)
-	println(values)
-	return err*/
-	return nil
+	request := s.genTSInsertRecordReq(deviceId, timestamp, measurements, dataTypes, values)
+	_, err := s.client.InsertRecord(context.Background(), request)
+	return err
 }
 
 type DialOption interface {

@@ -15,30 +15,12 @@ export GOPROXY=https://goproxy.io
 mkdir session_example && cd session_example
 
 cat > session_example.go <<EOF
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 package main
 
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/manlge/go-iotdb/client"
 )
@@ -62,8 +44,8 @@ func main() {
 	insertStringRecord()
 	setTimeZone()
 	println(getTimeZone())
-	session.InsertRecord("root.ln.wf02.wt02", []string{"hardware"}, []int32{1},
-		[]interface{}{3, "123"}, 222)
+	session.InsertRecord("root.ln.device1", []string{"description", "price", "tick_count", "status", "restart_count", "temperature"}, []int32{client.TEXT, client.DOUBLE, client.INT64, client.BOOLEAN, client.INT32, client.FLOAT},
+		[]interface{}{string("Test Device 1"), float64(1988.20), int64(3333333), true, int32(1), float32(12.10)}, time.Now().UnixNano()/1000000)
 
 	sessionDataSet, err := session.ExecuteQueryStatement("SHOW TIMESERIES")
 

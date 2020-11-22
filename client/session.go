@@ -285,7 +285,15 @@ func (s *Session) genTSInsertRecordReq(deviceId string, time int64,
 
 	for i, t := range types {
 		binary.Write(buff, binary.BigEndian, int16(t))
-		binary.Write(buff, binary.BigEndian, values[i])
+		if t == TEXT {
+			text := values[i].(string)
+			size := len(text)
+			binary.Write(buff, binary.BigEndian, int32(size))
+			binary.Write(buff, binary.BigEndian, []byte(text))
+		} else {
+			binary.Write(buff, binary.BigEndian, values[i])
+		}
+
 	}
 
 	request.Values = buff.Bytes()

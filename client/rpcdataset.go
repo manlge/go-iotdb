@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/manlge/go-iotdb/rpc"
 )
@@ -122,7 +123,7 @@ func (s *IoTDBRpcDataSet) constructOneRow() error {
 
 func (s *IoTDBRpcDataSet) getText(columnName string) string {
 	if columnName == TIMESTAMP_STR {
-		return fmt.Sprintf("%v", bytesToLong(s.time))
+		return time.Unix(0, bytesToLong(s.time)*1000000).UTC().Format(time.RFC3339)
 	}
 
 	index := s.columnOrdinalMap[columnName] - START_INDEX
@@ -262,7 +263,7 @@ func (s *IoTDBRpcDataSet) fetchResults() (bool, error) {
 		return false, err
 	}
 	//   RpcUtils.verifySuccess(resp.getStatus());
-	if resp.HasResultSet {
+	if !resp.HasResultSet {
 		s.emptyResultSet = true
 	} else {
 		s.queryDataSet = resp.GetQueryDataSet()

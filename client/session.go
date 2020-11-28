@@ -160,11 +160,11 @@ func (s *Session) DeleteStorageGroups(storageGroupIds []string) error {
  *return
  *error: correctness of operation
  */
-func (s *Session) CreateTimeseries(path string, dataType int32, encoding int32, compressor int32) error {
+func (s *Session) CreateTimeseries(path string, dataType int32, encoding int32, compressor int32, attributes map[string]string, tags map[string]string) (r *rpc.TSStatus, err error) {
 	request := rpc.TSCreateTimeseriesReq{SessionId: s.sessionId, Path: path, DataType: dataType, Encoding: encoding,
-		Compressor: compressor}
-	_, err := s.client.CreateTimeseries(context.Background(), &request)
-	return err
+		Compressor: compressor, Attributes: attributes, Tags: tags}
+	status, err := s.client.CreateTimeseries(context.Background(), &request)
+	return status, err
 }
 
 /*
@@ -293,7 +293,6 @@ func (s *Session) genTSInsertRecordReq(deviceId string, time int64,
 		} else {
 			binary.Write(buff, binary.BigEndian, values[i])
 		}
-
 	}
 
 	request.Values = buff.Bytes()

@@ -123,7 +123,7 @@ func createTimeseries() {
 	var dataType = client.FLOAT
 	var encoding = client.PLAIN
 	var compressor = client.SNAPPY
-	session.CreateTimeseries(path, dataType, encoding, compressor)
+	session.CreateTimeseries(path, dataType, encoding, compressor, nil, nil)
 }
 
 func createMultiTimeseries() {

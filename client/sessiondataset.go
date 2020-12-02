@@ -52,6 +52,14 @@ func (s *SessionDataSet) GetInt64(columnName string) int64 {
 	return s.ioTDBRpcDataSet.getInt64(columnName)
 }
 
+func (s *SessionDataSet) GetTime() int64 {
+	return s.ioTDBRpcDataSet.getTime()
+}
+
+func (s *SessionDataSet) GetValue(columnName string) interface{} {
+	return s.ioTDBRpcDataSet.getValue(columnName)
+}
+
 func (s *SessionDataSet) GetColumnCount() int {
 	return s.ioTDBRpcDataSet.columnCount
 }

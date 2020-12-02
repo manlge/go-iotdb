@@ -50,7 +50,7 @@ type IoTDBRpcDataSet struct {
 	columnOrdinalMap           map[string]int32
 	columnTypeDeduplicatedList []int32
 	columnNameIndexMap         map[string]int32
-	typeMap                    map[string]int32
+	columnTypeMap              map[string]int32
 	currentBitmap              []byte
 	time                       []byte
 	value                      [][]byte
@@ -121,6 +121,10 @@ func (s *IoTDBRpcDataSet) constructOneRow() error {
 	return nil
 }
 
+func (s *IoTDBRpcDataSet) getTime() int64 {
+	return bytesToLong(s.time)
+}
+
 func (s *IoTDBRpcDataSet) getText(columnName string) string {
 	if columnName == TIMESTAMP_STR {
 		return time.Unix(0, bytesToLong(s.time)*1000000).UTC().Format(time.RFC3339)
@@ -161,20 +165,43 @@ func (s *IoTDBRpcDataSet) getString(index int, dataType int32) string {
 	}
 }
 
+func (s *IoTDBRpcDataSet) getValue(columnName string) interface{} {
+	index := int(s.columnOrdinalMap[columnName] - START_INDEX)
+	if s.isNull(index, s.rowsIndex-1) {
+		return nil
+	}
+	dataType := s.columnTypeMap[columnName]
+	switch dataType {
+	case BOOLEAN:
+		return bool(s.value[index][0] != 0)
+	case INT32:
+		return bytesToInt32(s.value[index])
+	case INT64:
+		return bytesToLong(s.value[index])
+	case FLOAT:
+		bits := binary.BigEndian.Uint32(s.value[index])
+		return math.Float32frombits(bits)
+	case DOUBLE:
+		bits := binary.BigEndian.Uint64(s.value[index])
+		return math.Float64frombits(bits)
+	case TEXT:
+		return string(s.value[index])
+	default:
+		return nil
+	}
+}
+
 func (s *IoTDBRpcDataSet) getBool(columnName string) bool {
 	index := s.columnOrdinalMap[columnName] - START_INDEX
 	if !s.isNull(int(index), s.rowsIndex-1) {
 		s.lastReadWasNull = false
-
 		return s.value[index][0] != 0
 	}
 	s.lastReadWasNull = true
 	return false
-
 }
 
 func (s *IoTDBRpcDataSet) getFloat(columnName string) float32 {
-
 	index := s.columnOrdinalMap[columnName] - START_INDEX
 	if !s.isNull(int(index), s.rowsIndex-1) {
 		s.lastReadWasNull = false
@@ -301,6 +328,7 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 	}
 
 	ds.columnTypeList = make([]int32, 0)
+	ds.columnTypeMap = make(map[string]int32)
 
 	if !ignoreTimeStamp {
 		ds.columnNameList = append(ds.columnNameList, TIMESTAMP_STR)
@@ -316,7 +344,9 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 		ds.columnTypeDeduplicatedList = make([]int32, len(columnNameIndex))
 		for i, name := range columnNameList {
 			columnTypeString := columnTypes[i]
-			ds.columnTypeList = append(ds.columnTypeList, typeMap[columnTypeString])
+			columnDataType := typeMap[columnTypeString]
+			ds.columnTypeMap[name] = columnDataType
+			ds.columnTypeList = append(ds.columnTypeList, columnDataType)
 			if _, exists := ds.columnOrdinalMap[name]; !exists {
 				index := columnNameIndex[name]
 				ds.columnOrdinalMap[name] = index + START_INDEX
@@ -331,6 +361,7 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 			name := columnNameList[i]
 			dataType := typeMap[columnTypes[i]]
 			ds.columnTypeList = append(ds.columnTypeList, dataType)
+			ds.columnTypeMap[name] = dataType
 			ds.columnTypeDeduplicatedList[i] = dataType
 			if _, exists := ds.columnOrdinalMap[name]; !exists {
 				ds.columnOrdinalMap[name] = int32(index)

@@ -20,7 +20,6 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -63,13 +62,6 @@ func (s *IoTDBRpcDataSet) isNull(columnIndex int, rowIndex int) bool {
 	bitmap := s.currentBitmap[columnIndex]
 	shift := rowIndex % 8
 	return ((FLAG >> shift) & (bitmap & 0xff)) == 0
-}
-
-func bytesToInt32(bys []byte) int32 {
-	bytebuff := bytes.NewBuffer(bys)
-	var data int32
-	binary.Read(bytebuff, binary.BigEndian, &data)
-	return int32(data)
 }
 
 func (s *IoTDBRpcDataSet) constructOneRow() error {
@@ -115,19 +107,18 @@ func (s *IoTDBRpcDataSet) constructOneRow() error {
 				return fmt.Errorf("unsupported data type %s", dataType)
 			}
 		}
-
 	}
 	s.rowsIndex++
 	return nil
 }
 
 func (s *IoTDBRpcDataSet) getTime() int64 {
-	return bytesToLong(s.time)
+	return bytesToInt64(s.time)
 }
 
 func (s *IoTDBRpcDataSet) getText(columnName string) string {
 	if columnName == TIMESTAMP_STR {
-		return time.Unix(0, bytesToLong(s.time)*1000000).UTC().Format(time.RFC3339)
+		return time.Unix(0, bytesToInt64(s.time)*1000000).UTC().Format(time.RFC3339)
 	}
 
 	index := s.columnOrdinalMap[columnName] - START_INDEX
@@ -149,15 +140,13 @@ func (s *IoTDBRpcDataSet) getString(index int, dataType int32) string {
 	case INT32:
 		return fmt.Sprintf("%v", bytesToInt32(s.value[index]))
 	case INT64:
-		return fmt.Sprintf("%v", bytesToLong(s.value[index]))
+		return fmt.Sprintf("%v", bytesToInt64(s.value[index]))
 	case FLOAT:
 		bits := binary.BigEndian.Uint32(s.value[index])
-		f := math.Float32frombits(bits)
-		return fmt.Sprintf("%v", f)
+		return fmt.Sprintf("%v", math.Float32frombits(bits))
 	case DOUBLE:
 		bits := binary.BigEndian.Uint64(s.value[index])
-		d := math.Float64frombits(bits)
-		return fmt.Sprintf("%v", d)
+		return fmt.Sprintf("%v", math.Float64frombits(bits))
 	case TEXT:
 		return string(s.value[index])
 	default:
@@ -177,7 +166,7 @@ func (s *IoTDBRpcDataSet) getValue(columnName string) interface{} {
 	case INT32:
 		return bytesToInt32(s.value[index])
 	case INT64:
-		return bytesToLong(s.value[index])
+		return bytesToInt64(s.value[index])
 	case FLOAT:
 		bits := binary.BigEndian.Uint32(s.value[index])
 		return math.Float32frombits(bits)
@@ -207,11 +196,9 @@ func (s *IoTDBRpcDataSet) getFloat(columnName string) float32 {
 		s.lastReadWasNull = false
 		bits := binary.BigEndian.Uint32(s.value[index])
 		return math.Float32frombits(bits)
-	} else {
-		s.lastReadWasNull = true
-		return 0
 	}
-
+	s.lastReadWasNull = true
+	return 0
 }
 
 func (s *IoTDBRpcDataSet) getDouble(columnName string) float64 {
@@ -237,16 +224,9 @@ func (s *IoTDBRpcDataSet) getInt32(columnName string) int32 {
 	return 0
 }
 
-func bytesToLong(bys []byte) int64 {
-	bytebuff := bytes.NewBuffer(bys)
-	var data int64
-	binary.Read(bytebuff, binary.BigEndian, &data)
-	return int64(data)
-}
-
 func (s *IoTDBRpcDataSet) getInt64(columnName string) int64 {
 	if columnName == TIMESTAMP_STR {
-		return bytesToLong(s.time)
+		return bytesToInt64(s.time)
 	}
 
 	index := s.columnOrdinalMap[columnName] - START_INDEX
@@ -254,11 +234,10 @@ func (s *IoTDBRpcDataSet) getInt64(columnName string) int64 {
 
 	if !s.isNull(int(index), s.rowsIndex-1) {
 		s.lastReadWasNull = false
-		return bytesToLong(bys)
-	} else {
-		s.lastReadWasNull = true
-		return 0
+		return bytesToInt64(bys)
 	}
+	s.lastReadWasNull = true
+	return 0
 }
 
 func (s *IoTDBRpcDataSet) hasCachedResults() bool {
@@ -302,7 +281,6 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 	columnNameIndex map[string]int32,
 	queryId int64, client *rpc.TSIServiceClient, sessionId int64, queryDataSet *rpc.TSQueryDataSet,
 	ignoreTimeStamp bool) *IoTDBRpcDataSet {
-
 	typeMap := map[string]int32{
 		"BOOLEAN": BOOLEAN,
 		"INT32":   INT32,
@@ -352,7 +330,6 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 				ds.columnOrdinalMap[name] = index + START_INDEX
 				ds.columnTypeDeduplicatedList[index] = typeMap[columnTypeString]
 			}
-
 		}
 	} else {
 		ds.columnTypeDeduplicatedList = make([]int32, ds.columnCount)
@@ -369,6 +346,5 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 			}
 		}
 	}
-
 	return ds
 }

@@ -53,12 +53,16 @@ func (s *SessionDataSet) GetInt64(columnName string) int64 {
 	return s.ioTDBRpcDataSet.getInt64(columnName)
 }
 
-func (s *SessionDataSet) GetTime() int64 {
-	return s.ioTDBRpcDataSet.getTime()
+func (s *SessionDataSet) GetTimestamp() int64 {
+	return s.ioTDBRpcDataSet.GetTimestamp()
 }
 
 func (s *SessionDataSet) GetValue(columnName string) interface{} {
 	return s.ioTDBRpcDataSet.getValue(columnName)
+}
+
+func (s *SessionDataSet) GetRowRecord() *RowRecord {
+	return s.ioTDBRpcDataSet.GetRowRecord()
 }
 
 func (s *SessionDataSet) GetColumnCount() int {
@@ -71,6 +75,10 @@ func (s *SessionDataSet) GetColumnDataType(columnIndex int) int32 {
 
 func (s *SessionDataSet) GetColumnName(columnIndex int) string {
 	return s.ioTDBRpcDataSet.columnNameList[columnIndex]
+}
+
+func (s *SessionDataSet) IsIgnoreTimeStamp() bool {
+	return s.ioTDBRpcDataSet.ignoreTimeStamp
 }
 
 func NewSessionDataSet(sql string, columnNameList []string, columnTypeList []string,

@@ -45,38 +45,48 @@ func main() {
 	deleteTimeseries()
 	insertStringRecord()
 	setTimeZone()
-	println(getTimeZone())
+	if tz, err := getTimeZone(); err == nil {
+		fmt.Printf("TimeZone: %s\n", tz)
+	}
+	ts := time.Now().UTC().UnixNano() / 1000000
 	session.InsertRecord("root.ln.device1", []string{"description", "price", "tick_count", "status", "restart_count", "temperature"}, []int32{client.TEXT, client.DOUBLE, client.INT64, client.BOOLEAN, client.INT32, client.FLOAT},
-		[]interface{}{string("Test Device 1"), float64(1988.20), int64(3333333), true, int32(1), float32(12.10)}, time.Now().UnixNano()/1000000)
+		[]interface{}{string("Test Device 1"), float64(1988.20), int64(3333333), true, int32(1), float32(12.10)}, ts)
+
+	session.ExecuteStatement(fmt.Sprintf("delete from root.ln.device1 where time=%v", ts))
 
 	sessionDataSet, err := session.ExecuteQueryStatement("SHOW TIMESERIES")
-
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	printDataSet(sessionDataSet)
+	printDataSet0(sessionDataSet)
 
 	ds, err := session.ExecuteQueryStatement("select * from root.ln.device1")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	printDataSet(ds)
+	printDataSet2(ds)
 
 }
 
-func printDataSet(sessionDataSet *client.SessionDataSet) {
-	for i := 0; i < sessionDataSet.GetColumnCount(); i++ {
-		fmt.Printf("%s \t", sessionDataSet.GetColumnName(i))
+func printDataSet0(sessionDataSet *client.SessionDataSet) {
+	showTimestamp := !sessionDataSet.IsIgnoreTimeStamp()
+	if showTimestamp {
+		fmt.Print("Time\t\t\t\t")
 	}
-	println()
+
+	for i := 0; i < sessionDataSet.GetColumnCount(); i++ {
+		fmt.Printf("%s\t", sessionDataSet.GetColumnName(i))
+	}
+	fmt.Println()
 
 	for next, err := sessionDataSet.Next(); err == nil && next; next, err = sessionDataSet.Next() {
+		if showTimestamp {
+			fmt.Printf("%s\t", sessionDataSet.GetText(client.TIMESTAMP_STR))
+		}
 		for i := 0; i < sessionDataSet.GetColumnCount(); i++ {
 			columnName := sessionDataSet.GetColumnName(i)
-			// fmt.Printf("%s", sessionDataSet.GetText(columnName))
 			switch sessionDataSet.GetColumnDataType(i) {
 			case client.BOOLEAN:
 				fmt.Print(sessionDataSet.GetBool(columnName))
@@ -98,6 +108,60 @@ func printDataSet(sessionDataSet *client.SessionDataSet) {
 			default:
 			}
 			fmt.Print("\t\t")
+		}
+		fmt.Println()
+	}
+}
+
+func printDataSet1(sds *client.SessionDataSet) {
+	showTimestamp := !sds.IsIgnoreTimeStamp()
+	if showTimestamp {
+		fmt.Print("Time\t\t\t\t")
+	}
+
+	for i := 0; i < sds.GetColumnCount(); i++ {
+		fmt.Printf("%s\t", sds.GetColumnName(i))
+	}
+	fmt.Println()
+
+	for next, err := sds.Next(); err == nil && next; next, err = sds.Next() {
+		if showTimestamp {
+			fmt.Printf("%s\t", sds.GetText(client.TIMESTAMP_STR))
+		}
+		for i := 0; i < sds.GetColumnCount(); i++ {
+			columnName := sds.GetColumnName(i)
+			v := sds.GetValue(columnName)
+			if v == nil {
+				v = "null"
+			}
+			fmt.Printf("%v\t\t", v)
+		}
+		fmt.Println()
+	}
+}
+
+func printDataSet2(sds *client.SessionDataSet) {
+	showTimestamp := !sds.IsIgnoreTimeStamp()
+	if showTimestamp {
+		fmt.Print("Time\t\t\t\t")
+	}
+
+	for i := 0; i < sds.GetColumnCount(); i++ {
+		fmt.Printf("%s\t", sds.GetColumnName(i))
+	}
+	fmt.Println()
+
+	for next, err := sds.Next(); err == nil && next; next, err = sds.Next() {
+		if showTimestamp {
+			fmt.Printf("%s\t", sds.GetText(client.TIMESTAMP_STR))
+		}
+
+		for _, field := range sds.GetRowRecord().GetFields() {
+			v := field.GetValue()
+			if field.IsNull() {
+				v = "null"
+			}
+			fmt.Printf("%v\t\t", v)
 		}
 		fmt.Println()
 	}

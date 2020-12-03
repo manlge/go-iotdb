@@ -112,13 +112,13 @@ func (s *IoTDBRpcDataSet) constructOneRow() error {
 	return nil
 }
 
-func (s *IoTDBRpcDataSet) getTime() int64 {
+func (s *IoTDBRpcDataSet) GetTimestamp() int64 {
 	return bytesToInt64(s.time)
 }
 
 func (s *IoTDBRpcDataSet) getText(columnName string) string {
 	if columnName == TIMESTAMP_STR {
-		return time.Unix(0, bytesToInt64(s.time)*1000000).UTC().Format(time.RFC3339)
+		return time.Unix(0, bytesToInt64(s.time)*1000000).Format(time.RFC3339)
 	}
 
 	index := s.columnOrdinalMap[columnName] - START_INDEX
@@ -177,6 +177,23 @@ func (s *IoTDBRpcDataSet) getValue(columnName string) interface{} {
 		return string(s.value[index])
 	default:
 		return nil
+	}
+}
+
+func (s *IoTDBRpcDataSet) GetRowRecord() *RowRecord {
+	fields := make([]*Field, s.columnCount)
+	for i := 0; i < s.columnCount; i++ {
+		columnName := s.columnNameList[i]
+		field := Field{
+			name:     columnName,
+			dataType: s.columnTypeMap[columnName],
+			value:    s.getValue(columnName),
+		}
+		fields[i] = &field
+	}
+	return &RowRecord{
+		timestamp: s.GetTimestamp(),
+		fields:    fields,
 	}
 }
 
@@ -308,10 +325,6 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypes []strin
 	ds.columnTypeList = make([]int32, 0)
 	ds.columnTypeMap = make(map[string]int32)
 
-	if !ignoreTimeStamp {
-		ds.columnNameList = append(ds.columnNameList, TIMESTAMP_STR)
-		ds.columnTypeList = append(ds.columnTypeList, INT64)
-	}
 	// deduplicate and map
 	ds.columnOrdinalMap = make(map[string]int32)
 	if !ignoreTimeStamp {

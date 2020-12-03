@@ -268,7 +268,7 @@ func (s *Session) ExecuteQueryStatement(sql string) (*SessionDataSet, error) {
 	request := rpc.TSExecuteStatementReq{SessionId: s.sessionId, Statement: sql, StatementId: s.requestStatementId,
 		FetchSize: &s.FetchSize}
 	resp, err := s.client.ExecuteQueryStatement(context.Background(), &request)
-	return NewSessionDataSet(sql, resp.Columns, resp.DataTypeList, resp.ColumnNameIndexMap, *resp.QueryId, s.client, s.sessionId, resp.QueryDataSet, true), err
+	return NewSessionDataSet(sql, resp.Columns, resp.DataTypeList, resp.ColumnNameIndexMap, *resp.QueryId, s.client, s.sessionId, resp.QueryDataSet, resp.IgnoreTimeStamp != nil && *resp.IgnoreTimeStamp), err
 }
 
 func (s *Session) genTSInsertRecordReq(deviceId string, time int64,

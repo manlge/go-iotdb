@@ -37,6 +37,10 @@ func (s *SessionDataSet) GetBool(columnName string) bool {
 	return s.ioTDBRpcDataSet.getBool(columnName)
 }
 
+func (s *SessionDataSet) Scan(dest ...interface{}) error {
+	return s.ioTDBRpcDataSet.scan(dest...)
+}
+
 func (s *SessionDataSet) GetFloat(columnName string) float32 {
 	return s.ioTDBRpcDataSet.getFloat(columnName)
 }

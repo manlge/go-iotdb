@@ -24,6 +24,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/manlge/go-iotdb/rpc"
@@ -205,6 +206,91 @@ func (s *IoTDBRpcDataSet) getBool(columnName string) bool {
 	}
 	s.lastReadWasNull = true
 	return false
+}
+
+func (s *IoTDBRpcDataSet) scan(dest ...interface{}) error {
+	count := s.columnCount
+	if count > len(dest) {
+		count = len(dest)
+	}
+
+	for i := 0; i < count; i++ {
+		columnName := s.columnNameList[i]
+		index := int(s.columnOrdinalMap[columnName] - START_INDEX)
+		if s.isNull(index, s.rowsIndex-1) {
+			continue
+		}
+
+		dataType := s.columnTypeMap[columnName]
+		d := dest[i]
+
+		switch dataType {
+		case BOOLEAN:
+			switch t := d.(type) {
+			case *bool:
+				*t = bool(s.value[index][0] != 0)
+			case *string:
+				if s.value[index][0] != 0 {
+					*t = "true"
+				} else {
+					*t = "false"
+				}
+			default:
+				return fmt.Errorf("dest[%d] types must be *bool or *string", i)
+			}
+
+		case INT32:
+			switch t := d.(type) {
+			case *int32:
+				*t = bytesToInt32(s.value[index])
+			case *string:
+				*t = strconv.FormatInt(int64(bytesToInt32(s.value[index])), 10)
+			default:
+				return fmt.Errorf("dest[%d] types must be *int32 or *string", i)
+			}
+		case INT64:
+			switch t := d.(type) {
+			case *int64:
+				*t = bytesToInt64(s.value[index])
+			case *string:
+				*t = strconv.FormatInt(bytesToInt64(s.value[index]), 10)
+			default:
+				return fmt.Errorf("dest[%d] types must be *int64 or *string", i)
+			}
+		case FLOAT:
+			switch t := d.(type) {
+			case *float32:
+				bits := binary.BigEndian.Uint32(s.value[index])
+				*t = math.Float32frombits(bits)
+			case *string:
+				bits := binary.BigEndian.Uint32(s.value[index])
+				*t = fmt.Sprintf("%v", math.Float32frombits(bits))
+			default:
+				return fmt.Errorf("dest[%d] types must be *float32 or *string", i)
+			}
+		case DOUBLE:
+			switch t := d.(type) {
+			case *float64:
+				bits := binary.BigEndian.Uint64(s.value[index])
+				*t = math.Float64frombits(bits)
+			case *string:
+				bits := binary.BigEndian.Uint64(s.value[index])
+				*t = fmt.Sprintf("%v", math.Float64frombits(bits))
+			default:
+				return fmt.Errorf("dest[%d] types must be *float64 or *string", i)
+			}
+		case TEXT:
+			switch t := d.(type) {
+			case *string:
+				*t = string(s.value[index])
+			default:
+				return fmt.Errorf("dest[%d] types must be *string", i)
+			}
+		default:
+			return nil
+		}
+	}
+	return nil
 }
 
 func (s *IoTDBRpcDataSet) getFloat(columnName string) float32 {

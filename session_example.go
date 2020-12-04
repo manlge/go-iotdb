@@ -21,6 +21,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -52,8 +53,6 @@ func main() {
 	session.InsertRecord("root.ln.device1", []string{"description", "price", "tick_count", "status", "restart_count", "temperature"}, []int32{client.TEXT, client.DOUBLE, client.INT64, client.BOOLEAN, client.INT32, client.FLOAT},
 		[]interface{}{string("Test Device 1"), float64(1988.20), int64(3333333), true, int32(1), float32(12.10)}, ts)
 
-	session.ExecuteStatement(fmt.Sprintf("delete from root.ln.device1 where time=%v", ts))
-
 	sessionDataSet, err := session.ExecuteQueryStatement("SHOW TIMESERIES")
 	if err != nil {
 		fmt.Println(err)
@@ -66,8 +65,8 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	printDataSet2(ds)
-
+	printDevice1(ds)
+	session.ExecuteStatement(fmt.Sprintf("delete from root.ln.device1 where time=%v", ts))
 }
 
 func printDataSet0(sessionDataSet *client.SessionDataSet) {
@@ -163,6 +162,53 @@ func printDataSet2(sds *client.SessionDataSet) {
 			}
 			fmt.Printf("%v\t\t", v)
 		}
+		fmt.Println()
+	}
+}
+
+func printDevice1(sds *client.SessionDataSet) {
+	showTimestamp := !sds.IsIgnoreTimeStamp()
+	if showTimestamp {
+		fmt.Print("Time\t\t\t\t")
+	}
+
+	for i := 0; i < sds.GetColumnCount(); i++ {
+		fmt.Printf("%s\t", sds.GetColumnName(i))
+	}
+	fmt.Println()
+
+	for next, err := sds.Next(); err == nil && next; next, err = sds.Next() {
+		if showTimestamp {
+			fmt.Printf("%s\t", sds.GetText(client.TIMESTAMP_STR))
+		}
+
+		var restart_count int32
+		var price float64
+		var tick_count int64
+		var temperature float32
+		var description string
+		var status bool
+
+		// All of iotdb datatypes can be scan into string variables
+		// var restart_count string
+		// var price string
+		// var tick_count string
+		// var temperature string
+		// var description string
+		// var status string
+
+		if err := sds.Scan(&restart_count, &price, &tick_count, &temperature, &description, &status); err != nil {
+			log.Fatal(err)
+		}
+
+		whitespace := "\t\t"
+		fmt.Printf("%v%s", restart_count, whitespace)
+		fmt.Printf("%v%s", price, whitespace)
+		fmt.Printf("%v%s", tick_count, whitespace)
+		fmt.Printf("%v%s", temperature, whitespace)
+		fmt.Printf("%v%s", description, whitespace)
+		fmt.Printf("%v%s", status, whitespace)
+
 		fmt.Println()
 	}
 }

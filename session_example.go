@@ -182,29 +182,29 @@ func printDevice1(sds *client.SessionDataSet) {
 			fmt.Printf("%s\t", sds.GetText(client.TIMESTAMP_STR))
 		}
 
-		var restart_count int32
+		var restartCount int32
 		var price float64
-		var tick_count int64
+		var tickCount int64
 		var temperature float32
 		var description string
 		var status bool
 
 		// All of iotdb datatypes can be scan into string variables
-		// var restart_count string
+		// var restartCount string
 		// var price string
-		// var tick_count string
+		// var tickCount string
 		// var temperature string
 		// var description string
 		// var status string
 
-		if err := sds.Scan(&restart_count, &price, &tick_count, &temperature, &description, &status); err != nil {
+		if err := sds.Scan(&restartCount, &price, &tickCount, &temperature, &description, &status); err != nil {
 			log.Fatal(err)
 		}
 
 		whitespace := "\t\t"
-		fmt.Printf("%v%s", restart_count, whitespace)
+		fmt.Printf("%v%s", restartCount, whitespace)
 		fmt.Printf("%v%s", price, whitespace)
-		fmt.Printf("%v%s", tick_count, whitespace)
+		fmt.Printf("%v%s", restartCount, whitespace)
 		fmt.Printf("%v%s", temperature, whitespace)
 		fmt.Printf("%v%s", description, whitespace)
 		fmt.Printf("%v%s", status, whitespace)

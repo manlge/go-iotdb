@@ -24,6 +24,18 @@ import (
 	"encoding/binary"
 )
 
+func int32ToBytes(n int32) []byte {
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.BigEndian, n)
+	return bytesBuffer.Bytes()
+}
+
+func int64ToBytes(n int64) []byte {
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.BigEndian, n)
+	return bytesBuffer.Bytes()
+}
+
 func bytesToInt32(bys []byte) int32 {
 	bytebuff := bytes.NewBuffer(bys)
 	var data int32

@@ -105,7 +105,7 @@ func (s *IoTDBRpcDataSet) constructOneRow() error {
 				s.value[i] = valueBuffer[4 : 4+length]
 				s.queryDataSet.ValueList[i] = valueBuffer[4+length:]
 			default:
-				return fmt.Errorf("unsupported data type %s", dataType)
+				return fmt.Errorf("unsupported data type %d", dataType)
 			}
 		}
 	}

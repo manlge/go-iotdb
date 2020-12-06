@@ -57,6 +57,6 @@ func (f *Field) GetText() string {
 	return f.value.(string)
 }
 
-func (f *Field) getName() string {
+func (f *Field) GetName() string {
 	return f.name
 }

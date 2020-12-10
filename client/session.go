@@ -23,7 +23,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"net"
+	"reflect"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -274,7 +276,7 @@ func (s *Session) ExecuteQueryStatement(sql string) (*SessionDataSet, error) {
 func (s *Session) genTSInsertRecordReq(deviceId string, time int64,
 	measurements []string,
 	types []int32,
-	values []interface{}) *rpc.TSInsertRecordReq {
+	values []interface{}) (*rpc.TSInsertRecordReq, error) {
 	request := &rpc.TSInsertRecordReq{}
 	request.SessionId = s.sessionId
 	request.DeviceId = deviceId
@@ -284,23 +286,64 @@ func (s *Session) genTSInsertRecordReq(deviceId string, time int64,
 	buff := &bytes.Buffer{}
 	for i, t := range types {
 		binary.Write(buff, binary.BigEndian, int16(t))
-		if t == TEXT {
-			text := values[i].(string)
+		v := values[i]
+		if v == nil {
+			return nil, fmt.Errorf("values[%d] can't be nil", i)
+		}
+
+		switch v.(type) {
+		case bool:
+			if t != BOOLEAN {
+				return nil, fmt.Errorf("values[%d] must be bool", i)
+			}
+			binary.Write(buff, binary.BigEndian, v)
+		case int32:
+			if t != INT32 {
+				return nil, fmt.Errorf("values[%d] must be int32", i)
+			}
+			binary.Write(buff, binary.BigEndian, v)
+		case int64:
+			if t != INT64 {
+				return nil, fmt.Errorf("values[%d] must be int64", i)
+			}
+			binary.Write(buff, binary.BigEndian, v)
+		case float32:
+			if t != FLOAT {
+				return nil, fmt.Errorf("values[%d] must be float32", i)
+			}
+			binary.Write(buff, binary.BigEndian, v)
+		case float64:
+			if t != DOUBLE {
+				return nil, fmt.Errorf("values[%d] must be float64", i)
+			}
+			binary.Write(buff, binary.BigEndian, v)
+		case string:
+			if t != TEXT {
+				return nil, fmt.Errorf("values[%d] must be string", i)
+			}
+			text := v.(string)
 			size := len(text)
 			binary.Write(buff, binary.BigEndian, int32(size))
 			binary.Write(buff, binary.BigEndian, []byte(text))
-		} else {
-			binary.Write(buff, binary.BigEndian, values[i])
+		default:
+			return nil, fmt.Errorf("values[%d] %v datatype is %s, it doesn't support, the value's datatype must in [boolean, int32, int64, float32, float64, string]", i, v, reflect.TypeOf(v))
 		}
 	}
 	request.Values = buff.Bytes()
-	return request
+	return request, nil
 }
 
 func (s *Session) InsertRecord(deviceId string, measurements []string, dataTypes []int32, values []interface{}, timestamp int64) error {
-	request := s.genTSInsertRecordReq(deviceId, timestamp, measurements, dataTypes, values)
-	_, err := s.client.InsertRecord(context.Background(), request)
+	request, err := s.genTSInsertRecordReq(deviceId, timestamp, measurements, dataTypes, values)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.InsertRecord(context.Background(), request)
 	return err
+}
+
+func (s *Session) GetSessionId() int64 {
+	return s.sessionId
 }
 
 type DialOption interface {
